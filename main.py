@@ -1,150 +1,155 @@
-import csv
 import copy
-
-grid = []
-solution = []
-found_solutions = []
+import csv
 
 
-def get_board_from_file(file_name):
-    """Reads a CSV file and parses the data into a grid"""
-    global grid, solution
+class SudokuSolver:
+    """Solves a sudoku using a backtracking/recursive approach"""
+    def __init__(self, grid: list):
+        self.grid = grid
+        self.found_solutions = []
 
-    with open(file_name, "r") as file:
-        reader = csv.reader(file)
+    def is_possible(self, row, col, num):
+        """Check whether a number is possible/valid in a given location"""
 
-        # Flags whether we should parse what we read as a solution, change triggered by finding solution
-        # In the read file
-        parse_as_solution = False
+        # Check each element in this row, by checking each column index
+        for _col in range(9):
+            if self.grid[row][_col] == num:
+                return False
 
-        grid = []
-        solution = []
+        # Check each element in this column, by checking each row index
+        for _row in range(9):
+            if self.grid[_row][col] == num:
+                return False
 
-        for row in reader:
-            new_row = []
-            for item in row:
-                if item == "solution":
-                    parse_as_solution = True
+        # Square. Check all elements in this square
+        # Work out a start point for both col and row, by checking where the value currently lies between 1-9
+        if row < 3:
+            row_from = 0
+        elif row < 6:
+            row_from = 3
+        else:
+            row_from = 6
 
-                    break
-                elif item == "0":
-                    new_row.append(0)
-                else:
-                    try:
-                        item = int(item)
-                        if 1 <= item <= 9:
-                            new_row.append(item)
-                        else:
-                            ValueError("File not formatted correctly. "
+        if col < 3:
+            col_from = 0
+        elif col < 6:
+            col_from = 3
+        else:
+            col_from = 6
+
+        # Now search through this square, returning false if the number is found
+        for _row in range(row_from, row_from+3):
+            for _col in range(col_from, col_from+3):
+                if self.grid[_row][_col] == num:
+                    return False
+
+        # Must be available if the number hasn't been found.
+        return True
+
+    def solve(self, find_all=True) -> bool:
+        """Attempt to solve the sudoku"""
+
+        for row in range(9):  # Loop through each row
+            for col in range(9):  # Loop through each column
+                if self.grid[row][col] == 0:  # Check if the current cell is empty
+                    for num in range(1, 10): # Loop through all numbers
+                        if self.is_possible(row, col, num):  # Check if the number is a valid option
+                            # Update the number, then try solve again based on the new data
+                            self.grid[row][col] = num
+                            if self.solve(find_all=find_all):
+                                if find_all:
+                                    # Reset this cell so other options can be attempted one recursion back
+                                    self.grid[row][col] = 0
+                                else:
+                                    return True
+                            else:
+                                # Reset this cell so other options can be attempted one recursion back
+                                self.grid[row][col] = 0
+
+                    return False
+
+        self.found_solutions.append(copy.deepcopy(self.grid))
+        return True
+
+    @classmethod
+    def csv_to_grid(cls, filename) -> list:
+        """Attempts to read a csv file and parse valid grid data from it"""
+
+        with open(filename, "r") as file:
+            reader = csv.reader(file, delimiter=",")
+
+            # Flags whether we should parse what we read as a solution, change triggered by finding solution
+            # In the read file
+            parse_as_solution = False
+
+            grid = []
+            solution = []
+
+            for row in reader:
+                new_row = []
+                for item in row:
+                    if item == "solution":
+                        parse_as_solution = True
+
+                        break
+                    elif item == "0":
+                        new_row.append(0)
+                    else:
+                        try:
+                            item = int(item)
+                            if 1 <= item <= 9:
+                                new_row.append(item)
+                            else:
+                                raise ValueError("File not formatted correctly. "
+                                           "Only Integers between 0-9 or 'solution' trigger allowed.")
+                        except:
+                            raise ValueError("File not formatted correctly. "
                                        "Only Integers between 0-9 or 'solution' trigger allowed.")
-                    except:
-                        ValueError("File not formatted correctly. "
-                                   "Only Integers between 0-9 or 'solution' trigger allowed.")
 
-            if item == "solution":
-                continue
-            elif parse_as_solution:
-                solution.append(new_row)
-            else:
-                grid.append(new_row)
+                if item == "solution":
+                    continue
+                elif parse_as_solution:
+                    solution.append(new_row)
+                else:
+                    grid.append(new_row)
 
+        # Ignore the solution parse for now, we aren't using it.
+        return grid
 
-def print_grid(_grid):
-    """Displays the grid in a prettified way"""
-    rows = 0
+    @classmethod
+    def print_grid(cls, grid):
+        """Displays the grid in a prettified way"""
+        rows = 0
 
-    for row in _grid:
-        if rows == 3:
-            print("-" * 21)
-            rows = 0
-        cols = 0
-        for cell in row:
-            if cols == 3:
-                cols = 0
-                print("|", end=" ")
-            print(str(cell), end=" ")
-            cols += 1
+        for row in grid:
+            if rows == 3:
+                print("-" * 21)
+                rows = 0
+            cols = 0
+            for cell in row:
+                if cols == 3:
+                    cols = 0
+                    print("|", end=" ")
+                print(str(cell), end=" ")
+                cols += 1
 
-        print()
-        rows += 1
-
-
-def is_possible(row, col, num):
-    """Check if a move is possible by checking the row, column, and square for any other occurrences"""
-    global grid
-
-    # Row
-    for _col in range(9):
-        if grid[row][_col] == num:
-            return False
-
-    # Column
-    for _row in range(9):
-        if grid[_row][col] == num:
-            return False
-
-    # Square
-    row_from = 0
-    col_from = 0
-
-    if row < 3:
-        row_from = 0
-    elif row < 6:
-        row_from = 3
-    else:
-        row_from = 6
-
-    if col < 3:
-        col_from = 0
-    elif col < 6:
-        col_from = 3
-    else:
-        col_from = 6
-
-    for _row in range(row_from, row_from+3):
-        for _col in range(col_from, col_from + 3):
-            if grid[_row][_col] == num:
-                return False
-
-    # If nothing is caught, it must be available
-    return True
-
-
-def solve(find_all=True):
-    """Attempt to recursively solve the sudoku"""
-    # Find all means it will stop everything after finding one solution
-    # Useful if the user  only wants a single solution.
-    global grid, found_solutions
-
-    for row in range(9):
-        for col in range(9):
-            if grid[row][col] == 0:
-                for num in range(1, 10):
-                    if is_possible(row, col, num):
-                        grid[row][col] = num
-                        if not solve(find_all=find_all) or find_all:
-                            grid[row][col] = 0
-                        else:
-                            return True
-                return False
-    # Output result
-    print("Found a solution:")
-    print_grid(grid)
-
-    # Append the solution to the list of possible solutions
-    found_solutions.append(copy.deepcopy(grid))
-
-    return True
+            print()
+            rows += 1
 
 
 if __name__ == "__main__":
-    get_board_from_file('board3.csv')
+    ss = SudokuSolver(SudokuSolver.csv_to_grid('board1.csv'))
+    print("Testing find all solutions: ")
+    ss.solve()
+    print(f"Solutions found: {len(ss.found_solutions)}")
+    for solution in ss.found_solutions:
+        print("Solution: ")
+        SudokuSolver.print_grid(solution)
 
-    print("Initial Grid")
-    print_grid(grid)
-
-    solve(find_all=False)
-
-    for i in range(len(found_solutions)):
-        if solution:
-            print(f"Solution ({i+1}) matches given solution: {solution == found_solutions[i]}")
+    print("\n\nTesting find 1 solution")
+    ss = SudokuSolver(SudokuSolver.csv_to_grid('board1.csv'))
+    ss.solve(find_all=False)
+    print(f"Solutions found: {len(ss.found_solutions)}")
+    for solution in ss.found_solutions:
+        print("Solution: ")
+        SudokuSolver.print_grid(solution)
