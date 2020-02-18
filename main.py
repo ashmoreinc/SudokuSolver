@@ -138,7 +138,7 @@ class SudokuSolver:
 
 
 if __name__ == "__main__":
-    ss = SudokuSolver(SudokuSolver.csv_to_grid('board1.csv'))
+    ss = SudokuSolver(SudokuSolver.csv_to_grid('test_files/board1.csv'))
     print("Testing find all solutions: ")
     ss.solve()
     print(f"Solutions found: {len(ss.found_solutions)}")
@@ -147,7 +147,7 @@ if __name__ == "__main__":
         SudokuSolver.print_grid(solution)
 
     print("\n\nTesting find 1 solution")
-    ss = SudokuSolver(SudokuSolver.csv_to_grid('board1.csv'))
+    ss = SudokuSolver(SudokuSolver.csv_to_grid('test_files/board1.csv'))
     ss.solve(find_all=False)
     print(f"Solutions found: {len(ss.found_solutions)}")
     for solution in ss.found_solutions:
